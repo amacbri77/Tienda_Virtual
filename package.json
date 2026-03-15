@@ -1,0 +1,11 @@
+{
+  "name": "tienda-virtual-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "dev:api": "pnpm --filter @workspace/api-server dev",
+    "dev:web": "pnpm --filter @workspace/joyeria dev",
+    "build": "pnpm -r build"
+  }
+}
