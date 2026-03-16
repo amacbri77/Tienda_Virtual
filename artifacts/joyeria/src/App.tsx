@@ -7,13 +7,13 @@ type Product = {
   price: number;
 };
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
 export function App() {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetch(`${apiBase}/products/recommendations`)
+    fetch(`${apiBase}/api/products/recommendations`)
       .then((response) => response.json())
       .then((data) => setProducts(data.recommendations ?? []))
       .catch((error) => {
