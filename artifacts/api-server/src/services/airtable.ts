@@ -19,23 +19,34 @@ function readRequiredEnv(name: string): string {
   return value;
 }
 
-function parseProduct(record: AirtableRecord): Product | null {
-  const name = record.fields["name"];
-  const category = record.fields["category"];
-  const price = record.fields["price"];
+function getString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
 
-  if (typeof name !== "string" || typeof category !== "string") {
-    return null;
+function getNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) return parsed;
   }
+  return undefined;
+}
 
-  const numericPrice =
-    typeof price === "number"
-      ? price
-      : typeof price === "string"
-        ? Number(price)
-        : NaN;
+function getImageUrl(value: unknown): string | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const first = value[0] as Record<string, unknown>;
+  return typeof first?.url === "string" ? first.url : undefined;
+}
 
-  if (Number.isNaN(numericPrice)) {
+function parseProduct(record: AirtableRecord): Product | null {
+  const name = getString(record.fields["Nombre"]);
+  const category =
+    getString(record.fields["Tipo de pieza"]) ??
+    getString(record.fields["Colección"]) ??
+    "Sin categoría";
+  const price = getNumber(record.fields["Precio"]);
+
+  if (!name || price === undefined) {
     return null;
   }
 
@@ -43,24 +54,23 @@ function parseProduct(record: AirtableRecord): Product | null {
     id: record.id,
     name,
     category,
-    price: numericPrice,
-    imageUrl:
-      typeof record.fields["imageUrl"] === "string"
-        ? (record.fields["imageUrl"] as string)
-        : undefined,
+    price,
+    imageUrl: getImageUrl(record.fields["Imagen principal"]),
     description:
-      typeof record.fields["description"] === "string"
-        ? (record.fields["description"] as string)
-        : undefined
+      getString(record.fields["Descripción corta"]) ??
+      getString(record.fields["Descripción para IA"])
   };
 }
 
 export async function fetchProductsFromAirtable(): Promise<Product[]> {
   const apiKey = readRequiredEnv("AIRTABLE_API_KEY");
   const baseId = readRequiredEnv("AIRTABLE_BASE_ID");
-  const tableName = process.env["AIRTABLE_TABLE_NAME"] ?? "products";
+  const tableName = readRequiredEnv("AIRTABLE_TABLE_NAME");
 
   const url = `${AIRTABLE_API_BASE}/${baseId}/${encodeURIComponent(tableName)}`;
+
+  console.log("[Airtable debug] BASE_ID:", baseId);
+  console.log("[Airtable debug] TABLE_NAME:", tableName);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -74,14 +84,25 @@ export async function fetchProductsFromAirtable(): Promise<Product[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`Airtable request failed with ${response.status}`);
+      const bodyText = await response.text();
+      throw new Error(
+        `Airtable fetch failed: status ${response.status}, body: ${bodyText}`
+      );
     }
 
     const body = (await response.json()) as AirtableResponse;
-    return body.records.map(parseProduct).filter((product): product is Product => Boolean(product));
+    console.log("[Airtable debug] raw record count:", body.records.length);
+
+    const parsedProducts = body.records
+      .map(parseProduct)
+      .filter((product): product is Product => Boolean(product));
+
+    console.log("[Airtable debug] parsed product count:", parsedProducts.length);
+
+    return parsedProducts;
   } catch (error) {
-    console.error("Failed to fetch products from Airtable", error);
-    return [];
+    console.error("[Airtable debug] Failed to fetch products from Airtable", error);
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
