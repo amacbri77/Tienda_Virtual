@@ -90,6 +90,9 @@ export async function fetchProductsFromAirtable(): Promise<Product[]> {
     return body.records.map(parseProduct).filter((product): product is Product => Boolean(product));
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message.startsWith("Airtable fetch failed:")) {
+        throw error;
+      }
       throw new Error(`Airtable fetch failed: ${error.message}`);
     }
 
