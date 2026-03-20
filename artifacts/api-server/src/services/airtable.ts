@@ -33,19 +33,21 @@ function getNumber(value: unknown): number | undefined {
 }
 
 function getImageUrl(value: unknown): string | undefined {
-  console.log("DEBUG Imagen principal:", JSON.stringify(value));
+  console.log("DEBUG Imagen principal:", JSON.stringify(value, null, 2));
 
   if (Array.isArray(value) && value.length > 0) {
     const first = value[0] as any;
 
-    // Caso Airtable attachment normal
     if (typeof first?.url === "string") {
       return first.url;
     }
 
-    // Algunos casos usan thumbnails
-    if (first?.thumbnails?.large?.url) {
+    if (typeof first?.thumbnails?.large?.url === "string") {
       return first.thumbnails.large.url;
+    }
+
+    if (typeof first?.thumbnails?.full?.url === "string") {
+      return first.thumbnails.full.url;
     }
   }
 
