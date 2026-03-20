@@ -33,8 +33,6 @@ function getNumber(value: unknown): number | undefined {
 }
 
 function getImageUrl(value: unknown): string | undefined {
-  console.log("DEBUG Imagen principal:", JSON.stringify(value, null, 2));
-
   if (Array.isArray(value) && value.length > 0) {
     const first = value[0] as any;
 
@@ -71,7 +69,7 @@ function parseProduct(record: AirtableRecord): Product | null {
     name,
     category,
     price,
-    imageUrl: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&auto=format&fit=crop",
+    imageUrl: getImageUrl(record.fields["Imagen principal"]),
     description:
       getString(record.fields["Descripción corta"]) ??
       getString(record.fields["Descripción para IA"])
