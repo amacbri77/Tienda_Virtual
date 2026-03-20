@@ -63,7 +63,8 @@ function parseProduct(record: AirtableRecord): Product | null {
   if (!name || price === undefined) {
     return null;
   }
-
+console.log("DEBUG field names:", Object.keys(record.fields));
+console.log("DEBUG Imagen principal raw:", record.fields["Imagen principal"]);
   return {
     id: record.id,
     name,
