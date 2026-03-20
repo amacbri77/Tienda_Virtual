@@ -69,7 +69,7 @@ function parseProduct(record: AirtableRecord): Product | null {
     name,
     category,
     price,
-    imageUrl: getImageUrl(record.fields["Imagen principal"]),
+    imageUrl: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&auto=format&fit=crop",
     description:
       getString(record.fields["Descripción corta"]) ??
       getString(record.fields["Descripción para IA"])
