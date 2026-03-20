@@ -64,13 +64,13 @@ function parseProduct(record: AirtableRecord): Product | null {
     return null;
   }
 console.log("DEBUG field names:", Object.keys(record.fields));
-console.log("DEBUG Imagen principal raw:", record.fields["Imagen Principal"]);
+console.log("DEBUG Imagen Principal raw:", record.fields["Imagen Principal"]);
   return {
     id: record.id,
     name,
     category,
     price,
-    imageUrl: getImageUrl(record.fields["Imagen principal"]),
+    imageUrl: getImageUrl(record.fields["Imagen Principal"]),
     description:
       getString(record.fields["Descripción corta"]) ??
       getString(record.fields["Descripción para IA"])
