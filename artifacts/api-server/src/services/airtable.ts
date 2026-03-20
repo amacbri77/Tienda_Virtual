@@ -64,7 +64,7 @@ function parseProduct(record: AirtableRecord): Product | null {
     return null;
   }
 console.log("DEBUG field names:", Object.keys(record.fields));
-console.log("DEBUG Imagen principal raw:", record.fields["Imagen principal"]);
+console.log("DEBUG Imagen principal raw:", record.fields["Imagen Principal"]);
   return {
     id: record.id,
     name,
