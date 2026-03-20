@@ -1,3 +1,5 @@
+<h1>🔥 VERSION FINAL 🔥</h1>
+
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
