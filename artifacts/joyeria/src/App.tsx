@@ -1,3 +1,39 @@
+<div style={{ position: "relative", height: "90vh", overflow: "hidden" }}>
+  <video
+    autoPlay
+    loop
+    muted
+    playsInline
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }}
+  >
+    <source src="/hero.mp4" type="video/mp4" />
+  </video>
+
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      padding: "3rem",
+      background:
+        "linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.2))"
+    }}
+  >
+    <h1 style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+      Inspirado en el dorado
+    </h1>
+    <p style={{ fontSize: "1.2rem" }}>
+      Creado con intención
+    </p>
+  </div>
+</div>
+
 <h1>🔥 VERSION FINAL 🔥</h1>
 
 import { useEffect, useMemo, useState } from "react";
