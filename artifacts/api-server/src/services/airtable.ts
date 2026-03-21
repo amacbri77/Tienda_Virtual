@@ -49,6 +49,10 @@ function getImageUrl(value: unknown): string | undefined {
     }
   }
 
+  if (typeof value === "string") {
+    return value;
+  }
+
   return undefined;
 }
 
@@ -70,7 +74,11 @@ console.log("DEBUG Imagen Principal raw:", record.fields["Imagen Principal"]);
     name,
     category,
     price,
-    imageUrl: getImageUrl(record.fields["Imagen Principal"]),
+    imageUrl:
+  getImageUrl(record.fields["Imagen Principal"]) ??
+  getImageUrl(record.fields["Imagen principal"]) ??
+  getImageUrl(record.fields["Imagen"]) ??
+  getImageUrl(record.fields["imageUrl"]),
     description:
       getString(record.fields["Descripción corta"]) ??
       getString(record.fields["Descripción para IA"])
