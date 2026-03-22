@@ -1,41 +1,3 @@
-<div style={{ position: "relative", height: "90vh", overflow: "hidden" }}>
-  <video
-    autoPlay
-    loop
-    muted
-    playsInline
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover"
-    }}
-  >
-    <source src="/hero.mp4" type="video/mp4" />
-  </video>
-
-  <div
-    style={{
-      position: "absolute",
-      inset: 0,
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      padding: "3rem",
-      background:
-        "linear-gradient(to right, rgba(255,255,255,0.8), rgba(255,255,255,0.2))"
-    }}
-  >
-    <h1 style={{ fontSize: "3rem", marginBottom: "1rem" }}>
-      Inspirado en el dorado
-    </h1>
-    <p style={{ fontSize: "1.2rem" }}>
-      Creado con intención
-    </p>
-  </div>
-</div>
-
-<h1>🔥 VERSION FINAL 🔥</h1>
-
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
@@ -157,55 +119,70 @@ export function App() {
 
       <main>
         <section style={styles.heroSection}>
-          <div style={styles.heroCopy}>
-            <div style={styles.kicker}>Colecciones con significado</div>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            style={styles.heroVideo}
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+          </video>
 
-            <h1 style={styles.heroTitle}>
-              Joyas artesanales con historia, símbolo y presencia.
-            </h1>
+          <div style={styles.heroOverlay} />
 
-            <p style={styles.heroText}>
-              Descubre piezas inspiradas en amor, naturaleza, protección y tradición.
-              Una experiencia digital pensada para sentirse más humana, más cálida y
-              más curada que una tienda online convencional.
-            </p>
+          <div style={styles.heroInner}>
+            <div style={styles.heroCopy}>
+              <div style={styles.kicker}>Colecciones con significado</div>
 
-            <div style={styles.heroActions}>
-              <a href="#catalogo" style={styles.primaryButton}>
-                Explorar catálogo
-              </a>
-              <a href="#recomendados" style={styles.secondaryButton}>
-                Ver recomendados
-              </a>
-            </div>
+              <h1 style={styles.heroTitle}>
+                Joyas artesanales con historia, símbolo y presencia.
+              </h1>
 
-            <div style={styles.trustRow}>
-              <TrustBadge title="Hecho por artesanos" text="Piezas con intención y origen." />
-              <TrustBadge title="Curaduría simbólica" text="Colecciones con significado." />
-              <TrustBadge title="Experiencia guiada" text="Descubre mejor que con un catálogo plano." />
-            </div>
-          </div>
+              <p style={styles.heroText}>
+                Descubre piezas inspiradas en amor, naturaleza, protección y tradición.
+                Una experiencia digital pensada para sentirse más humana, más cálida y
+                más curada que una tienda online convencional.
+              </p>
 
-          <div style={styles.heroVisual}>
-            <div style={styles.heroCardLarge}>
-              <div style={styles.heroCardLabel}>Selección destacada</div>
-              <div style={styles.heroCardTitle}>Piezas con esencia cálida y atemporal</div>
-              <div style={styles.heroCardMeta}>
-                Diseño elegante · narrativa artesanal · intención simbólica
+              <div style={styles.heroActions}>
+                <a href="#catalogo" style={styles.primaryButton}>
+                  Explorar catálogo
+                </a>
+                <a href="#recomendados" style={styles.secondaryButton}>
+                  Ver recomendados
+                </a>
+              </div>
+
+              <div style={styles.trustRow}>
+                <TrustBadge title="Hecho por artesanos" text="Piezas con intención y origen." />
+                <TrustBadge title="Curaduría simbólica" text="Colecciones con significado." />
+                <TrustBadge title="Experiencia guiada" text="Descubre mejor que con un catálogo plano." />
               </div>
             </div>
 
-            <div style={styles.heroCardSmall}>
-              <div style={styles.miniEyebrow}>Colecciones</div>
-              {featuredCategories.length > 0 ? (
-                featuredCategories.map((cat) => (
-                  <span key={cat} style={styles.categoryChip}>
-                    {cat}
-                  </span>
-                ))
-              ) : (
-                <span style={styles.categoryChip}>Artesanal</span>
-              )}
+            <div style={styles.heroVisual}>
+              <div style={styles.heroCardLarge}>
+                <div style={styles.heroCardLabel}>Selección destacada</div>
+                <div style={styles.heroCardTitle}>Piezas con esencia cálida y atemporal</div>
+                <div style={styles.heroCardMeta}>
+                  Diseño elegante · narrativa artesanal · intención simbólica
+                </div>
+              </div>
+
+              <div style={styles.heroCardSmall}>
+                <div style={styles.miniEyebrow}>Colecciones</div>
+                {featuredCategories.length > 0 ? (
+                  featuredCategories.map((cat) => (
+                    <span key={cat} style={styles.categoryChip}>
+                      {cat}
+                    </span>
+                  ))
+                ) : (
+                  <span style={styles.categoryChip}>Artesanal</span>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -495,7 +472,30 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600
   },
   heroSection: {
+    position: "relative",
+    minHeight: "88vh",
+    overflow: "hidden",
+    display: "flex",
+    alignItems: "center"
+  },
+  heroVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover"
+  },
+  heroOverlay: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(90deg, rgba(248,243,235,0.92) 0%, rgba(248,243,235,0.72) 42%, rgba(248,243,235,0.38) 70%, rgba(248,243,235,0.18) 100%)"
+  },
+  heroInner: {
+    position: "relative",
+    zIndex: 1,
     maxWidth: 1240,
+    width: "100%",
     margin: "0 auto",
     padding: "72px 24px 32px",
     display: "grid",
@@ -547,7 +547,7 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 10px 30px rgba(34, 29, 23, 0.18)"
   },
   secondaryButton: {
-    background: "rgba(255,255,255,0.7)",
+    background: "rgba(255,255,255,0.76)",
     color: "#3f352c",
     textDecoration: "none",
     padding: "14px 20px",
@@ -564,9 +564,10 @@ const styles: Record<string, React.CSSProperties> = {
   trustBadge: {
     padding: 16,
     borderRadius: 18,
-    background: "rgba(255,255,255,0.62)",
+    background: "rgba(255,255,255,0.68)",
     border: "1px solid rgba(126, 97, 68, 0.08)",
-    boxShadow: "0 8px 30px rgba(73, 52, 31, 0.05)"
+    boxShadow: "0 8px 30px rgba(73, 52, 31, 0.05)",
+    backdropFilter: "blur(8px)"
   },
   trustTitle: {
     fontWeight: 700,
@@ -586,13 +587,13 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 300,
     padding: 28,
     borderRadius: 30,
-    background:
-      "radial-gradient(circle at top left, rgba(255,255,255,0.95), rgba(239,224,204,0.9))",
+    background: "rgba(255,255,255,0.68)",
     boxShadow: "0 20px 60px rgba(92, 67, 39, 0.12)",
     border: "1px solid rgba(155, 124, 89, 0.1)",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
+    backdropFilter: "blur(12px)"
   },
   heroCardLabel: {
     fontSize: 12,
@@ -616,9 +617,10 @@ const styles: Record<string, React.CSSProperties> = {
   heroCardSmall: {
     padding: 20,
     borderRadius: 24,
-    background: "rgba(255,255,255,0.6)",
+    background: "rgba(255,255,255,0.64)",
     border: "1px solid rgba(155, 124, 89, 0.1)",
-    boxShadow: "0 14px 40px rgba(92, 67, 39, 0.08)"
+    boxShadow: "0 14px 40px rgba(92, 67, 39, 0.08)",
+    backdropFilter: "blur(12px)"
   },
   miniEyebrow: {
     fontSize: 12,
@@ -858,7 +860,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footerText: {
     margin: 0,
-    color: "#7a695a",
-    fontSize: 14
+    color: "#6f604f"
   }
 };
