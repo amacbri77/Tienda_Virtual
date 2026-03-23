@@ -25,10 +25,28 @@ function getString(value: unknown): string | undefined {
 
 function getNumber(value: unknown): number | undefined {
   if (typeof value === "number" && !Number.isNaN(value)) return value;
+
   if (typeof value === "string") {
-    const parsed = Number(value);
+    const normalized = value.replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
     if (!Number.isNaN(parsed)) return parsed;
   }
+
+  return undefined;
+}
+
+function getLinkedValue(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    const first = value[0];
+    if (typeof first === "string" && first.trim()) {
+      return first.trim();
+    }
+  }
+
   return undefined;
 }
 
@@ -49,39 +67,55 @@ function getImageUrl(value: unknown): string | undefined {
     }
   }
 
-  if (typeof value === "string") {
-    return value;
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
   }
 
   return undefined;
 }
 
 function parseProduct(record: AirtableRecord): Product | null {
-  const name = getString(record.fields["Nombre"]);
-  const category =
-    getString(record.fields["Tipo de pieza"]) ??
-    getString(record.fields["Colección"]) ??
-    "Sin categoría";
-  const price = getNumber(record.fields["Precio"]);
+  const fields = record.fields;
+
+  const activo = fields["Activo"] === true;
+  const visibleEnTienda = fields["Visible en tienda"] === true;
+
+  if (!activo || !visibleEnTienda) {
+    return null;
+  }
+
+  const name = getString(fields["Nombre"]);
+  const price = getNumber(fields["Precio"]);
 
   if (!name || price === undefined) {
     return null;
   }
-console.log("DEBUG field names:", Object.keys(record.fields));
-console.log("DEBUG Imagen Principal raw:", record.fields["Imagen Principal"]);
+
+  const rawCategory =
+    getString(fields["Tipo de pieza"]) ??
+    getLinkedValue(fields["Categoría"]) ??
+    "Sin categoría";
+
+  const category = rawCategory.toLowerCase();
+
+  const imageUrl =
+    getImageUrl(fields["Imagen principal"]) ??
+    getImageUrl(fields["Imagen Principal"]) ??
+    getImageUrl(fields["Imagen"]) ??
+    getImageUrl(fields["URL imagen principal"]);
+
+  const description =
+    getString(fields["Descripción corta"]) ??
+    getString(fields["Descripción para guía"]) ??
+    getString(fields["Descripción para IA"]);
+
   return {
     id: record.id,
     name,
     category,
     price,
-    imageUrl:
-  getImageUrl(record.fields["Imagen Principal"]) ??
-  getImageUrl(record.fields["Imagen principal"]) ??
-  getImageUrl(record.fields["Imagen"]) ??
-  getImageUrl(record.fields["imageUrl"]),
-    description:
-      getString(record.fields["Descripción corta"]) ??
-      getString(record.fields["Descripción para IA"])
+    imageUrl,
+    description
   };
 }
 
@@ -91,9 +125,6 @@ export async function fetchProductsFromAirtable(): Promise<Product[]> {
   const tableName = readRequiredEnv("AIRTABLE_TABLE_NAME");
 
   const url = `${AIRTABLE_API_BASE}/${baseId}/${encodeURIComponent(tableName)}`;
-
-  console.log("[Airtable debug] BASE_ID:", baseId);
-  console.log("[Airtable debug] TABLE_NAME:", tableName);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -114,17 +145,12 @@ export async function fetchProductsFromAirtable(): Promise<Product[]> {
     }
 
     const body = (await response.json()) as AirtableResponse;
-    console.log("[Airtable debug] raw record count:", body.records.length);
 
-    const parsedProducts = body.records
+    return body.records
       .map(parseProduct)
       .filter((product): product is Product => Boolean(product));
-
-    console.log("[Airtable debug] parsed product count:", parsedProducts.length);
-
-    return parsedProducts;
   } catch (error) {
-    console.error("[Airtable debug] Failed to fetch products from Airtable", error);
+    console.error("Failed to fetch products from Airtable", error);
     throw error;
   } finally {
     clearTimeout(timeout);
