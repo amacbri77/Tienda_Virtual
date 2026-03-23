@@ -77,13 +77,6 @@ function getImageUrl(value: unknown): string | undefined {
 function parseProduct(record: AirtableRecord): Product | null {
   const fields = record.fields;
 
-  const activo = fields["Activo"] === true;
-  const visibleEnTienda = fields["Visible en tienda"] === true;
-
-  if (!activo || !visibleEnTienda) {
-    return null;
-  }
-
   const name = getString(fields["Nombre"]);
   const price = getNumber(fields["Precio"]);
 
