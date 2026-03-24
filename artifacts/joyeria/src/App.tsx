@@ -16,7 +16,7 @@ type GuideAnswers = {
   presence: string | null;
 };
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+const apiBase = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000").replace(/\/+$/, "");
 
 const currency = new Intl.NumberFormat("es-CO", {
   style: "currency",
