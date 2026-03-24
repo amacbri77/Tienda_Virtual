@@ -779,7 +779,7 @@ function ProductCard({ product }: { product: Product }) {
         </p>
 
         <div style={baseStyles.cardFooter}>
-          <div style={baseStyles.cardPrice}>{currency.format(product.price * 1000)}</div>
+          <div style={baseStyles.cardPrice}>{currency.format(product.price)}</div>
           <button type="button" style={baseStyles.cardButton}>
             Ver pieza
           </button>
