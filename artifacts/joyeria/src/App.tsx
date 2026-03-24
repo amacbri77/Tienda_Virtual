@@ -45,47 +45,52 @@ export function App() {
   });
 
   useEffect(() => {
-    const controller = new AbortController();
+  const controller = new AbortController();
 
-    async function load() {
+  async function load() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const catalogRes = await fetch(`${apiBase}/api/products`, {
+        signal: controller.signal
+      });
+
+      if (!catalogRes.ok) {
+        throw new Error("No se pudo cargar el catálogo.");
+      }
+
+      const catalogData = await catalogRes.json();
+      const catalogProducts = catalogData.products ?? [];
+
+      setCatalog(catalogProducts);
+
       try {
-        setLoading(true);
-        setError(null);
-
-        const [recommendedRes, catalogRes] = await Promise.all([
-          fetch(`${apiBase}/api/products/recommendations`, {
-            signal: controller.signal
-          }),
-          fetch(`${apiBase}/api/products`, {
-            signal: controller.signal
-          })
-        ]);
+        const recommendedRes = await fetch(`${apiBase}/api/products/recommendations`, {
+          signal: controller.signal
+        });
 
         if (!recommendedRes.ok) {
           throw new Error("No se pudieron cargar las recomendaciones.");
         }
 
-        if (!catalogRes.ok) {
-          throw new Error("No se pudo cargar el catálogo.");
-        }
-
         const recommendedData = await recommendedRes.json();
-        const catalogData = await catalogRes.json();
-
         setRecommended(recommendedData.recommendations ?? []);
-        setCatalog(catalogData.products ?? []);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
-      } finally {
-        setLoading(false);
+      } catch {
+        setRecommended(catalogProducts.slice(0, 4));
       }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    load();
+  load();
 
-    return () => controller.abort();
-  }, []);
+  return () => controller.abort();
+}, []);
 
   useEffect(() => {
     function handleResize() {
