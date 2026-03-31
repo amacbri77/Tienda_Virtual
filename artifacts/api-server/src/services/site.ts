@@ -1,5 +1,6 @@
 const AIRTABLE_API_BASE = "https://api.airtable.com/v0";
 const SITE_SETTINGS_TABLE_ID = "tbls9bpGocY5yDgUB";
+const HOME_SECTIONS_TABLE_ID = "tbl3tpHn4ss3o2KhK";
 
 interface AirtableRecord {
   id: string;
@@ -15,6 +16,14 @@ export type SiteSettings = {
   brandSubtitle: string;
   footerMessage: string;
   logoUrl?: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroText: string;
+  heroCtaLabel: string;
+  heroCtaLink: string;
+  heroVideoUrl?: string;
+  heroImageUrl?: string;
 };
 
 function readRequiredEnv(name: string): string {
@@ -55,52 +64,106 @@ function getAttachmentUrl(value: unknown): string | undefined {
   return undefined;
 }
 
+function getFirstAttachmentUrlFromPossibleFields(
+  fields: Record<string, unknown>,
+  fieldNames: string[]
+): string | undefined {
+  for (const fieldName of fieldNames) {
+    const url = getAttachmentUrl(fields[fieldName]);
+    if (url) return url;
+  }
+  return undefined;
+}
+
+async function fetchAirtableTable(
+  baseId: string,
+  tableId: string,
+  apiKey: string,
+  signal: AbortSignal
+): Promise<AirtableRecord[]> {
+  const url = `${AIRTABLE_API_BASE}/${baseId}/${tableId}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiKey}`
+    },
+    signal
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(
+      `Airtable fetch failed for table ${tableId}: status ${response.status}, body: ${bodyText}`
+    );
+  }
+
+  const body = (await response.json()) as AirtableResponse;
+  return body.records;
+}
+
 export async function fetchSiteSettingsFromAirtable(): Promise<SiteSettings> {
   const apiKey = readRequiredEnv("AIRTABLE_API_KEY");
   const baseId = readRequiredEnv("AIRTABLE_BASE_ID");
-
-  const url = `${AIRTABLE_API_BASE}/${baseId}/${SITE_SETTINGS_TABLE_ID}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`
-      },
-      signal: controller.signal
-    });
+    const [siteRecords, sectionRecords] = await Promise.all([
+      fetchAirtableTable(baseId, SITE_SETTINGS_TABLE_ID, apiKey, controller.signal),
+      fetchAirtableTable(baseId, HOME_SECTIONS_TABLE_ID, apiKey, controller.signal)
+    ]);
 
-    if (!response.ok) {
-      const bodyText = await response.text();
-      throw new Error(
-        `Airtable site settings fetch failed: status ${response.status}, body: ${bodyText}`
-      );
-    }
+    const siteRecord = siteRecords[0];
+    const heroRecord = sectionRecords.find(
+      (record) => getString(record.fields["Clave de sección"]) === "hero"
+    );
 
-    const body = (await response.json()) as AirtableResponse;
-    const record = body.records[0];
+    const siteFields = siteRecord?.fields ?? {};
+    const heroFields = heroRecord?.fields ?? {};
 
-    if (!record) {
-      return {
-        brandName: "Arte Dorado",
-        brandSubtitle: "Joyería artesanal colombiana",
-        footerMessage: "Joyas artesanales pensadas para acompañar historias, momentos y personas."
-      };
-    }
+    const heroVideoUrl = getFirstAttachmentUrlFromPossibleFields(heroFields, [
+      "Video hero",
+      "Video Hero",
+      "Hero video",
+      "Hero Video",
+      "Video",
+      "Video principal"
+    ]);
 
-    const fields = record.fields;
+    const heroImageUrl = getFirstAttachmentUrlFromPossibleFields(heroFields, [
+      "Imagen hero fallback",
+      "Imagen Hero Fallback",
+      "Hero image fallback",
+      "Imagen hero",
+      "Imagen Hero",
+      "Imagen",
+      "Imagen principal"
+    ]);
 
     return {
-      brandName: getString(fields["Nombre de marca"]) ?? "Arte Dorado",
+      brandName: getString(siteFields["Nombre de marca"]) ?? "Arte Dorado",
       brandSubtitle:
-        getString(fields["Subtítulo de marca"]) ?? "Joyería artesanal colombiana",
+        getString(siteFields["Subtítulo de marca"]) ?? "Joyería artesanal colombiana",
       footerMessage:
-        getString(fields["Mensaje de footer"]) ??
+        getString(siteFields["Mensaje de footer"]) ??
         "Joyas artesanales pensadas para acompañar historias, momentos y personas.",
-      logoUrl: getAttachmentUrl(fields["Logo"])
+      logoUrl: getAttachmentUrl(siteFields["Logo"]),
+      heroEyebrow: getString(heroFields["Eyebrow"]) ?? "Boutique digital guiada",
+      heroTitle:
+        getString(heroFields["Título"]) ??
+        "Encuentra una pieza con historia, intención y presencia.",
+      heroSubtitle:
+        getString(heroFields["Subtítulo"]) ??
+        "Arte Dorado busca sentirse más cercano a una boutique curada que a un catálogo estándar.",
+      heroText:
+        getString(heroFields["Texto"]) ??
+        "Descubre joyas artesanales con una experiencia más cálida, orientada y significativa.",
+      heroCtaLabel: getString(heroFields["Etiqueta CTA"]) ?? "Quiero que me guíen",
+      heroCtaLink: getString(heroFields["Enlace CTA"]) ?? "/guia",
+      heroVideoUrl,
+      heroImageUrl
     };
   } finally {
     clearTimeout(timeout);

@@ -24,7 +24,9 @@ function getString(value: unknown): string | undefined {
 }
 
 function getNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    return value;
+  }
 
   if (typeof value === "string") {
     const normalized = value.replace(/[^\d.-]/g, "");
@@ -52,7 +54,13 @@ function getLinkedValue(value: unknown): string | undefined {
 
 function getImageUrl(value: unknown): string | undefined {
   if (Array.isArray(value) && value.length > 0) {
-    const first = value[0] as any;
+    const first = value[0] as {
+      url?: string;
+      thumbnails?: {
+        large?: { url?: string };
+        full?: { url?: string };
+      };
+    };
 
     if (typeof first?.url === "string") {
       return first.url;
@@ -74,6 +82,15 @@ function getImageUrl(value: unknown): string | undefined {
   return undefined;
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function parseProduct(record: AirtableRecord): Product | null {
   const fields = record.fields;
 
@@ -84,12 +101,12 @@ function parseProduct(record: AirtableRecord): Product | null {
     return null;
   }
 
+  const slug = getString(fields["Slug"]) ?? slugify(name);
+
   const rawCategory =
     getString(fields["Tipo de pieza"]) ??
     getLinkedValue(fields["Categoría"]) ??
     "Sin categoría";
-
-  const category = rawCategory.toLowerCase();
 
   const imageUrl =
     getImageUrl(fields["Imagen principal"]) ??
@@ -102,17 +119,29 @@ function parseProduct(record: AirtableRecord): Product | null {
     getString(fields["Descripción para guía"]) ??
     getString(fields["Descripción para IA"]);
 
+  const descriptionLong =
+    getString(fields["Descripción larga"]) ??
+    getString(fields["Descripción para IA"]);
+
   return {
     id: record.id,
+    slug,
     name,
-    category,
+    category: rawCategory.toLowerCase(),
     price,
     imageUrl,
-    description
+    description,
+    descriptionLong,
+    collection: getLinkedValue(fields["Colección"]),
+    occasion: getLinkedValue(fields["Ocasión"]),
+    meaning: getLinkedValue(fields["Significado"]),
+    material: getString(fields["Material principal"]),
+    detail: getString(fields["Piedra o detalle"]),
+    style: getString(fields["Estilo"])
   };
 }
 
-export async function fetchProductsFromAirtable(): Promise<Product[]> {
+async function fetchRawProducts(): Promise<AirtableRecord[]> {
   const apiKey = readRequiredEnv("AIRTABLE_API_KEY");
   const baseId = readRequiredEnv("AIRTABLE_BASE_ID");
   const tableName = readRequiredEnv("AIRTABLE_TABLE_NAME");
@@ -138,14 +167,26 @@ export async function fetchProductsFromAirtable(): Promise<Product[]> {
     }
 
     const body = (await response.json()) as AirtableResponse;
-
-    return body.records
-      .map(parseProduct)
-      .filter((product): product is Product => Boolean(product));
+    return body.records;
   } catch (error) {
     console.error("Failed to fetch products from Airtable", error);
     throw error;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchProductsFromAirtable(): Promise<Product[]> {
+  const records = await fetchRawProducts();
+
+  return records
+    .map(parseProduct)
+    .filter((product): product is Product => Boolean(product));
+}
+
+export async function fetchProductBySlugFromAirtable(
+  slug: string
+): Promise<Product | null> {
+  const products = await fetchProductsFromAirtable();
+  return products.find((product) => product.slug === slug) ?? null;
 }

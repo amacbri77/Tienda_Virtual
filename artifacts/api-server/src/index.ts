@@ -1,5 +1,7 @@
 import app from "./app.js";
 
+process.loadEnvFile?.(".env");
+
 const rawPort = process.env["PORT"] ?? "4000";
 const port = Number(rawPort);
 

@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, Route, Routes, Link } from "react-router-dom";
+import { Navigate, Route, Routes, Link, useParams } from "react-router-dom";
 
 type Product = {
   id: string;
+  slug: string;
   name: string;
   category: string;
   price: number;
   description?: string;
+  descriptionLong?: string;
   imageUrl?: string;
+  collection?: string;
+  occasion?: string;
+  meaning?: string;
+  material?: string;
+  detail?: string;
+  style?: string;
 };
 
 type GuideAnswers = {
@@ -17,6 +25,32 @@ type GuideAnswers = {
   presence: string | null;
 };
 
+type SiteSettings = {
+  brandName: string;
+  brandSubtitle: string;
+  footerMessage: string;
+  logoUrl?: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroText: string;
+  heroCtaLabel: string;
+  heroCtaLink: string;
+  heroVideoUrl?: string;
+  heroImageUrl?: string;
+};
+
+type CollectionItem = {
+  id: string;
+  name: string;
+  shortDescription: string;
+  editorialText: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  order: number;
+  isActive: boolean;
+};
+
 const initialGuideAnswers: GuideAnswers = {
   purpose: null,
   meaning: null,
@@ -24,10 +58,7 @@ const initialGuideAnswers: GuideAnswers = {
   presence: null
 };
 
-const apiBase = (
-  import.meta.env.VITE_API_BASE_URL ??
-  "https://workspaceapi-server-production-fcae.up.railway.app"
-).replace(/\/+$/, "");
+const apiBase = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 const currency = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -44,41 +75,6 @@ const theme = {
   accentDark: "#2b221b",
   border: "rgba(146, 116, 83, 0.12)"
 };
-
-const collectionsData = [
-  {
-    name: "Amor Dorado",
-    title: "Amor Dorado",
-    text: "Una colección pensada para vínculos, regalos y gestos con intención.",
-    detail:
-      "Reúne piezas cálidas y delicadas, orientadas al afecto, la conexión y la idea de regalar algo que permanezca.",
-    cta: "Explorar catálogo"
-  },
-  {
-    name: "Protección Sutil",
-    title: "Protección Sutil",
-    text: "Piezas con lectura simbólica y una presencia serena.",
-    detail:
-      "Una selección orientada a la idea de protección, compañía y resguardo, sin caer en lo excesivo.",
-    cta: "Explorar catálogo"
-  },
-  {
-    name: "Luz Serena",
-    title: "Luz Serena",
-    text: "Delicadeza, claridad y una elegancia fácil de integrar.",
-    detail:
-      "Piezas luminosas, sobrias y versátiles, pensadas para quienes buscan belleza ligera y atemporal.",
-    cta: "Explorar catálogo"
-  },
-  {
-    name: "Esencia Natural",
-    title: "Esencia Natural",
-    text: "Formas y sensaciones conectadas con lo orgánico y lo vivo.",
-    detail:
-      "Una selección con materiales, detalles y evocaciones que dialogan con la naturaleza y una estética más orgánica.",
-    cta: "Explorar catálogo"
-  }
-];
 
 function useResponsive() {
   const [isMobile, setIsMobile] = useState<boolean>(() => {
@@ -104,6 +100,70 @@ function useResponsive() {
   }, []);
 
   return { isMobile, isTablet };
+}
+
+function useSiteSettings() {
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({
+    brandName: "Arte Dorado",
+    brandSubtitle: "Joyería artesanal colombiana",
+    footerMessage: "Joyas artesanales pensadas para acompañar historias, momentos y personas.",
+    heroEyebrow: "Boutique digital guiada",
+    heroTitle: "Encuentra una pieza con historia, intención y presencia.",
+    heroSubtitle:
+      "Arte Dorado busca sentirse más cercano a una boutique curada que a un catálogo estándar.",
+    heroText:
+      "Descubre joyas artesanales con una experiencia más cálida, orientada y significativa.",
+    heroCtaLabel: "Quiero que me guíen",
+    heroCtaLink: "/guia"
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadSiteSettings() {
+      try {
+        const response = await fetch(`${apiBase}/api/site-settings`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("No se pudo cargar la configuración del sitio.");
+        }
+
+        const data = await response.json();
+
+        setSiteSettings({
+          brandName: data.brandName ?? "Arte Dorado",
+          brandSubtitle: data.brandSubtitle ?? "Joyería artesanal colombiana",
+          footerMessage:
+            data.footerMessage ??
+            "Joyas artesanales pensadas para acompañar historias, momentos y personas.",
+          logoUrl: data.logoUrl,
+          heroEyebrow: data.heroEyebrow ?? "Boutique digital guiada",
+          heroTitle:
+            data.heroTitle ?? "Encuentra una pieza con historia, intención y presencia.",
+          heroSubtitle:
+            data.heroSubtitle ??
+            "Arte Dorado busca sentirse más cercano a una boutique curada que a un catálogo estándar.",
+          heroText:
+            data.heroText ??
+            "Descubre joyas artesanales con una experiencia más cálida, orientada y significativa.",
+          heroCtaLabel: data.heroCtaLabel ?? "Quiero que me guíen",
+          heroCtaLink: data.heroCtaLink ?? "/guia",
+          heroVideoUrl: data.heroVideoUrl,
+          heroImageUrl: data.heroImageUrl
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+
+    loadSiteSettings();
+
+    return () => controller.abort();
+  }, []);
+
+  return siteSettings;
 }
 
 function pageShellStyle(): React.CSSProperties {
@@ -193,6 +253,7 @@ function cardStyle(isMobile = false): React.CSSProperties {
 
 function SiteHeader() {
   const { isMobile } = useResponsive();
+  const siteSettings = useSiteSettings();
 
   return (
     <header style={headerStyle()}>
@@ -219,26 +280,41 @@ function SiteHeader() {
             alignItems: "center"
           }}
         >
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #b88a56 0%, #8f6232 100%)",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              flexShrink: 0
-            }}
-          >
-            ✦
-          </div>
+          {siteSettings.logoUrl ? (
+            <img
+              src={siteSettings.logoUrl}
+              alt={siteSettings.brandName}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                objectFit: "cover",
+                flexShrink: 0
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #b88a56 0%, #8f6232 100%)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                flexShrink: 0
+              }}
+            >
+              ✦
+            </div>
+          )}
+
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>Arte Dorado</div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>{siteSettings.brandName}</div>
             <div style={{ fontSize: 12, color: theme.textSoft }}>
-              Joyería artesanal colombiana
+              {siteSettings.brandSubtitle}
             </div>
           </div>
         </Link>
@@ -268,6 +344,7 @@ function SiteHeader() {
 
 function SiteFooter() {
   const { isMobile } = useResponsive();
+  const siteSettings = useSiteSettings();
 
   return (
     <footer
@@ -278,209 +355,12 @@ function SiteFooter() {
       }}
     >
       <div style={containerStyle(isMobile)}>
-        <div style={{ fontWeight: 800, marginBottom: 8 }}>Arte Dorado</div>
+        <div style={{ fontWeight: 800, marginBottom: 8 }}>{siteSettings.brandName}</div>
         <p style={{ margin: 0, color: theme.textSoft, maxWidth: 720, lineHeight: 1.7 }}>
-          Joyas artesanales pensadas para acompañar historias, momentos y personas.
+          {siteSettings.footerMessage}
         </p>
       </div>
     </footer>
-  );
-}
-
-function HomePage() {
-  const { isMobile, isTablet } = useResponsive();
-
-  return (
-    <div style={pageShellStyle()}>
-      <SiteHeader />
-
-      <main>
-        <section
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            padding: isMobile ? "34px 0 24px" : "56px 0 34px"
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: -80,
-              right: -40,
-              width: 320,
-              height: 320,
-              borderRadius: "50%",
-              background: "rgba(184,138,86,0.10)",
-              filter: "blur(60px)",
-              pointerEvents: "none"
-            }}
-          />
-          <div style={containerStyle(isMobile)}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.1fr 0.9fr",
-                gap: isMobile ? 18 : 28,
-                alignItems: "center"
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.16em",
-                    color: theme.accent,
-                    fontWeight: 800,
-                    marginBottom: 16
-                  }}
-                >
-                  Boutique digital guiada
-                </div>
-
-                <h1
-                  style={{
-                    margin: "0 0 18px",
-                    fontSize: isMobile ? 42 : isTablet ? 56 : 72,
-                    lineHeight: 0.95,
-                    letterSpacing: "-0.05em"
-                  }}
-                >
-                  Encuentra una pieza con historia, intención y presencia.
-                </h1>
-
-                <p
-                  style={{
-                    margin: 0,
-                    maxWidth: 760,
-                    fontSize: isMobile ? 17 : 20,
-                    lineHeight: 1.7,
-                    color: theme.textSoft
-                  }}
-                >
-                  Arte Dorado busca sentirse más cercano a una boutique curada que a una
-                  tienda estándar. Aquí puedes entrar por guía, por colección o por
-                  exploración libre.
-                </p>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 14,
-                    marginTop: 28,
-                    flexWrap: "wrap",
-                    flexDirection: isMobile ? "column" : "row"
-                  }}
-                >
-                  <Link to="/guia" style={primaryButtonStyle(isMobile)}>
-                    Quiero que me guíen
-                  </Link>
-                  <Link to="/colecciones" style={secondaryButtonStyle(isMobile)}>
-                    Ver colecciones
-                  </Link>
-                </div>
-              </div>
-
-              <div style={cardStyle(isMobile)}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.14em",
-                    color: theme.accent,
-                    fontWeight: 800,
-                    marginBottom: 12
-                  }}
-                >
-                  Experiencia de marca
-                </div>
-
-                <h2
-                  style={{
-                    margin: "0 0 14px",
-                    fontSize: isMobile ? 28 : 36,
-                    lineHeight: 1.08
-                  }}
-                >
-                  Una entrada más cercana a una boutique que a una tienda estándar
-                </h2>
-
-                <p style={{ margin: 0, color: theme.textSoft, lineHeight: 1.7, fontSize: 16 }}>
-                  La idea no es solo mostrar productos. La idea es recibir, orientar y
-                  acompañar la elección, dejando espacio para descubrir con intención.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section style={{ padding: isMobile ? "8px 0 28px" : "18px 0 34px" }}>
-          <div style={containerStyle(isMobile)}>
-            <div
-              style={{
-                marginBottom: 20,
-                fontSize: 12,
-                textTransform: "uppercase",
-                letterSpacing: "0.16em",
-                color: theme.accent,
-                fontWeight: 800
-              }}
-            >
-              Explora a tu manera
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "repeat(3, 1fr)",
-                gap: 18
-              }}
-            >
-              <div style={cardStyle(isMobile)}>
-                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
-                  Quiero que me guíen
-                </h3>
-                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
-                  Responde unas pocas preguntas y empieza a descubrir piezas con una lógica
-                  más cercana a una asesoría que a una búsqueda fría.
-                </p>
-                <Link to="/guia" style={primaryButtonStyle(isMobile)}>
-                  Ir a la guía
-                </Link>
-              </div>
-
-              <div style={cardStyle(isMobile)}>
-                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
-                  Ver colecciones
-                </h3>
-                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
-                  Explora universos más editoriales y curados, organizados por sensibilidad,
-                  intención y estilo.
-                </p>
-                <Link to="/colecciones" style={primaryButtonStyle(isMobile)}>
-                  Ir a colecciones
-                </Link>
-              </div>
-
-              <div style={cardStyle(isMobile)}>
-                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
-                  Explorar catálogo
-                </h3>
-                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
-                  Si prefieres una navegación más directa, entra al catálogo y recorre la
-                  colección con búsqueda y filtros.
-                </p>
-                <Link to="/catalogo" style={primaryButtonStyle(isMobile)}>
-                  Ir al catálogo
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
   );
 }
 
@@ -639,20 +519,22 @@ function ProductCard({ product }: { product: Product }) {
         >
           <div style={{ fontWeight: 800, fontSize: 18 }}>{currency.format(product.price)}</div>
 
-          <button
-            type="button"
+          <Link
+            to={`/producto/${product.slug}`}
             style={{
-              border: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               borderRadius: 999,
               background: theme.accentDark,
               color: "#fff",
               padding: "10px 14px",
               fontWeight: 700,
-              cursor: "pointer"
+              textDecoration: "none"
             }}
           >
             Ver pieza
-          </button>
+          </Link>
         </div>
       </div>
     </article>
@@ -739,13 +621,242 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function getLabel(
-  value: string | null,
-  map: Record<string, string>,
-  fallback: string
-) {
+function getLabel(value: string | null, map: Record<string, string>, fallback: string) {
   if (!value) return fallback;
   return map[value] ?? fallback;
+}
+
+function HomePage() {
+  const { isMobile, isTablet } = useResponsive();
+  const siteSettings = useSiteSettings();
+
+  const heroLink =
+    typeof siteSettings.heroCtaLink === "string" && siteSettings.heroCtaLink.trim()
+      ? siteSettings.heroCtaLink
+      : "/guia";
+
+  return (
+    <div style={pageShellStyle()}>
+      <SiteHeader />
+
+      <main>
+        <section
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            padding: isMobile ? "34px 0 24px" : "56px 0 34px",
+            minHeight: isMobile ? 520 : 640,
+            display: "flex",
+            alignItems: "center"
+          }}
+        >
+          {siteSettings.heroVideoUrl ? (
+            <video
+              src={siteSettings.heroVideoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls={false}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.32,
+                pointerEvents: "none"
+              }}
+            />
+          ) : siteSettings.heroImageUrl ? (
+            <img
+              src={siteSettings.heroImageUrl}
+              alt={siteSettings.heroTitle}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.16,
+                pointerEvents: "none"
+              }}
+            />
+          ) : null}
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(247,241,232,0.68) 0%, rgba(251,247,242,0.74) 100%)"
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: -80,
+              right: -40,
+              width: 320,
+              height: 320,
+              borderRadius: "50%",
+              background: "rgba(184,138,86,0.10)",
+              filter: "blur(60px)",
+              pointerEvents: "none"
+            }}
+          />
+
+          <div
+            style={{
+              ...containerStyle(isMobile),
+              position: "relative",
+              zIndex: 1
+            }}
+          >
+            <div
+              style={{
+                maxWidth: isMobile ? "100%" : 820
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
+                  color: theme.accent,
+                  fontWeight: 800,
+                  marginBottom: 16
+                }}
+              >
+                {siteSettings.heroEyebrow}
+              </div>
+
+              <h1
+                style={{
+                  margin: "0 0 18px",
+                  fontSize: isMobile ? 42 : isTablet ? 56 : 72,
+                  lineHeight: 0.95,
+                  letterSpacing: "-0.05em",
+                  maxWidth: 900
+                }}
+              >
+                {siteSettings.heroTitle}
+              </h1>
+
+              <p
+                style={{
+                  margin: "0 0 12px",
+                  maxWidth: 760,
+                  fontSize: isMobile ? 17 : 20,
+                  lineHeight: 1.7,
+                  color: theme.textSoft,
+                  fontWeight: 600
+                }}
+              >
+                {siteSettings.heroSubtitle}
+              </p>
+
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: 760,
+                  fontSize: isMobile ? 15 : 17,
+                  lineHeight: 1.7,
+                  color: theme.textSoft
+                }}
+              >
+                {siteSettings.heroText}
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  marginTop: 28,
+                  flexWrap: "wrap",
+                  flexDirection: isMobile ? "column" : "row"
+                }}
+              >
+                <Link to={heroLink} style={primaryButtonStyle(isMobile)}>
+                  {siteSettings.heroCtaLabel}
+                </Link>
+                <Link to="/colecciones" style={secondaryButtonStyle(isMobile)}>
+                  Ver colecciones
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style={{ padding: isMobile ? "8px 0 28px" : "18px 0 34px" }}>
+          <div style={containerStyle(isMobile)}>
+            <div
+              style={{
+                marginBottom: 20,
+                fontSize: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: theme.accent,
+                fontWeight: 800
+              }}
+            >
+              Explora a tu manera
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "repeat(3, 1fr)",
+                gap: 18
+              }}
+            >
+              <div style={cardStyle(isMobile)}>
+                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
+                  Quiero que me guíen
+                </h3>
+                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
+                  Responde unas pocas preguntas y empieza a descubrir piezas con una lógica
+                  más cercana a una asesoría que a una búsqueda fría.
+                </p>
+                <Link to="/guia" style={primaryButtonStyle(isMobile)}>
+                  Ir a la guía
+                </Link>
+              </div>
+
+              <div style={cardStyle(isMobile)}>
+                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
+                  Ver colecciones
+                </h3>
+                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
+                  Explora universos más editoriales y curados, organizados por sensibilidad,
+                  intención y estilo.
+                </p>
+                <Link to="/colecciones" style={primaryButtonStyle(isMobile)}>
+                  Ir a colecciones
+                </Link>
+              </div>
+
+              <div style={cardStyle(isMobile)}>
+                <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: isMobile ? 24 : 28 }}>
+                  Explorar catálogo
+                </h3>
+                <p style={{ margin: "0 0 18px", color: theme.textSoft, lineHeight: 1.7 }}>
+                  Si prefieres una navegación más directa, entra al catálogo y recorre la
+                  colección con búsqueda y filtros.
+                </p>
+                <Link to="/catalogo" style={primaryButtonStyle(isMobile)}>
+                  Ir al catálogo
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
 }
 
 function GuiaPage() {
@@ -1164,6 +1275,41 @@ function GuiaPage() {
 function ColeccionesPage() {
   const { isMobile, isTablet } = useResponsive();
 
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadCollections() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`${apiBase}/api/collections`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las colecciones.");
+        }
+
+        const data = await response.json();
+        setCollections(data.collections ?? []);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadCollections();
+
+    return () => controller.abort();
+  }, []);
+
   return (
     <div style={pageShellStyle()}>
       <SiteHeader />
@@ -1207,58 +1353,136 @@ function ColeccionesPage() {
             </p>
           </section>
 
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-              gap: 20
-            }}
-          >
-            {collectionsData.map((collection) => (
-              <article key={collection.name} style={cardStyle(isMobile)}>
-                <div
+          {loading ? (
+            <LoadingGrid />
+          ) : error ? (
+            <ErrorState message={error} />
+          ) : collections.length === 0 ? (
+            <EmptyState
+              title="Aún no hay colecciones activas"
+              text="Cuando haya colecciones disponibles en Airtable, aparecerán aquí."
+            />
+          ) : (
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+                gap: 20
+              }}
+            >
+              {collections.map((collection) => (
+                <article
+                  key={collection.id}
                   style={{
-                    fontSize: 12,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.14em",
-                    color: theme.accent,
-                    fontWeight: 800,
-                    marginBottom: 12
+                    ...cardStyle(isMobile),
+                    position: "relative",
+                    overflow: "hidden",
+                    minHeight: isMobile ? 420 : 460
                   }}
                 >
-                  Colección
-                </div>
+                  {collection.videoUrl ? (
+                    <video
+                      src={collection.videoUrl}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls={false}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: 0.34,
+                        pointerEvents: "none",
+                        zIndex: 0
+                      }}
+                    />
+                  ) : collection.imageUrl ? (
+                    <img
+                      src={collection.imageUrl}
+                      alt={collection.name}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: 0.16,
+                        pointerEvents: "none",
+                        zIndex: 0
+                      }}
+                    />
+                  ) : null}
 
-                <h2 style={{ margin: "0 0 10px", fontSize: isMobile ? 28 : 34, lineHeight: 1.08 }}>
-                  {collection.title}
-                </h2>
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(247,241,232,0.68) 100%)",
+                      zIndex: 1
+                    }}
+                  />
 
-                <p style={{ margin: "0 0 12px", color: theme.textSoft, lineHeight: 1.7 }}>
-                  {collection.text}
-                </p>
+                  <div
+                    style={{
+                      position: "relative",
+                      zIndex: 2
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.14em",
+                        color: theme.accent,
+                        fontWeight: 800,
+                        marginBottom: 12
+                      }}
+                    >
+                      Colección
+                    </div>
 
-                <p style={{ margin: "0 0 20px", color: theme.textSoft, lineHeight: 1.7 }}>
-                  {collection.detail}
-                </p>
+                    <h2
+                      style={{
+                        margin: "0 0 10px",
+                        fontSize: isMobile ? 28 : 34,
+                        lineHeight: 1.08
+                      }}
+                    >
+                      {collection.name}
+                    </h2>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    flexDirection: isMobile ? "column" : "row"
-                  }}
-                >
-                  <Link to="/catalogo" style={primaryButtonStyle(isMobile)}>
-                    {collection.cta}
-                  </Link>
-                  <Link to="/guia" style={secondaryButtonStyle(isMobile)}>
-                    Quiero que me orienten
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </section>
+                    <p style={{ margin: "0 0 12px", color: theme.textSoft, lineHeight: 1.7 }}>
+                      {collection.shortDescription}
+                    </p>
+
+                    <p style={{ margin: "0 0 20px", color: theme.textSoft, lineHeight: 1.7 }}>
+                      {collection.editorialText}
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        flexDirection: isMobile ? "column" : "row"
+                      }}
+                    >
+                      <Link to="/catalogo" style={primaryButtonStyle(isMobile)}>
+                        Explorar catálogo
+                      </Link>
+                      <Link to="/guia" style={secondaryButtonStyle(isMobile)}>
+                        Quiero que me orienten
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
 
           <section style={{ marginTop: 30 }}>
             <div style={cardStyle(isMobile)}>
@@ -1281,10 +1505,283 @@ function ColeccionesPage() {
 
               <p style={{ margin: 0, color: theme.textSoft, lineHeight: 1.7 }}>
                 Esta sección existe para que la exploración no se reduzca a filtros fríos.
-                Más adelante, estas colecciones se alimentarán directamente desde Airtable.
+                Ahora las colecciones ya se alimentan directamente desde Airtable.
               </p>
             </div>
           </section>
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}
+
+function ProductDetailPage() {
+  const { isMobile, isTablet } = useResponsive();
+  const { slug } = useParams();
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [recommended, setRecommended] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) return;
+
+    const controller = new AbortController();
+
+    async function loadProduct() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const productResponse = await fetch(`${apiBase}/api/products/${slug}`, {
+          signal: controller.signal
+        });
+
+        if (!productResponse.ok) {
+          if (productResponse.status === 404) {
+            throw new Error("No encontramos esta pieza.");
+          }
+          throw new Error("No se pudo cargar el producto.");
+        }
+
+        const productData = await productResponse.json();
+        setProduct(productData.product ?? null);
+
+        try {
+          const recommendedResponse = await fetch(`${apiBase}/api/products/recommendations`, {
+            signal: controller.signal
+          });
+
+          if (recommendedResponse.ok) {
+            const recommendedData = await recommendedResponse.json();
+            const recommendedProducts = (recommendedData.recommendations ?? []).filter(
+              (item: Product) => item.slug !== slug
+            );
+            setRecommended(recommendedProducts.slice(0, 3));
+          }
+        } catch {
+          setRecommended([]);
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProduct();
+
+    return () => controller.abort();
+  }, [slug]);
+
+  return (
+    <div style={pageShellStyle()}>
+      <SiteHeader />
+      <main style={{ padding: isMobile ? "32px 0" : "56px 0" }}>
+        <div style={containerStyle(isMobile)}>
+          {loading ? (
+            <LoadingGrid />
+          ) : error ? (
+            <ErrorState message={error} />
+          ) : !product ? (
+            <EmptyState
+              title="Producto no encontrado"
+              text="No pudimos encontrar esta pieza."
+            />
+          ) : (
+            <>
+              <section
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile || isTablet ? "1fr" : "1fr 1fr",
+                  gap: 28,
+                  alignItems: "start",
+                  marginBottom: 34
+                }}
+              >
+                <div style={cardStyle(isMobile)}>
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      style={{
+                        width: "100%",
+                        height: isMobile ? 360 : 520,
+                        objectFit: "cover",
+                        borderRadius: 20,
+                        display: "block"
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: isMobile ? 360 : 520,
+                        borderRadius: 20,
+                        background: "linear-gradient(180deg, #efe4d6 0%, #e7d6c1 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#9a846f",
+                        fontSize: 14,
+                        fontWeight: 600
+                      }}
+                    >
+                      Sin imagen
+                    </div>
+                  )}
+                </div>
+
+                <div style={cardStyle(isMobile)}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.14em",
+                      color: theme.accent,
+                      fontWeight: 800,
+                      marginBottom: 12
+                    }}
+                  >
+                    {product.category}
+                  </div>
+
+                  <h1
+                    style={{
+                      margin: "0 0 12px",
+                      fontSize: isMobile ? 34 : 48,
+                      lineHeight: 1
+                    }}
+                  >
+                    {product.name}
+                  </h1>
+
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 800,
+                      marginBottom: 18
+                    }}
+                  >
+                    {currency.format(product.price)}
+                  </div>
+
+                  <p
+                    style={{
+                      margin: "0 0 14px",
+                      color: theme.textSoft,
+                      lineHeight: 1.7,
+                      fontSize: 16
+                    }}
+                  >
+                    {product.description ??
+                      "Pieza artesanal curada para una experiencia más humana y significativa."}
+                  </p>
+
+                  {product.descriptionLong ? (
+                    <p
+                      style={{
+                        margin: "0 0 18px",
+                        color: theme.textSoft,
+                        lineHeight: 1.7,
+                        fontSize: 15
+                      }}
+                    >
+                      {product.descriptionLong}
+                    </p>
+                  ) : null}
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 10,
+                      marginBottom: 22
+                    }}
+                  >
+                    {product.collection ? (
+                      <GuideMetaItem label="Colección" value={product.collection} />
+                    ) : null}
+                    {product.occasion ? (
+                      <GuideMetaItem label="Ocasión" value={product.occasion} />
+                    ) : null}
+                    {product.meaning ? (
+                      <GuideMetaItem label="Significado" value={product.meaning} />
+                    ) : null}
+                    {product.material ? (
+                      <GuideMetaItem label="Material" value={product.material} />
+                    ) : null}
+                    {product.detail ? (
+                      <GuideMetaItem label="Detalle" value={product.detail} />
+                    ) : null}
+                    {product.style ? (
+                      <GuideMetaItem label="Estilo" value={product.style} />
+                    ) : null}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      flexDirection: isMobile ? "column" : "row"
+                    }}
+                  >
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(
+                        `Hola, me interesa la pieza "${product.name}".`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={primaryButtonStyle(isMobile)}
+                    >
+                      Consultar por WhatsApp
+                    </a>
+
+                    <Link to="/catalogo" style={secondaryButtonStyle(isMobile)}>
+                      Volver al catálogo
+                    </Link>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div
+                  style={{
+                    fontSize: 12,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.14em",
+                    color: theme.accent,
+                    fontWeight: 800,
+                    marginBottom: 14
+                  }}
+                >
+                  También podría interesarte
+                </div>
+
+                {recommended.length === 0 ? (
+                  <EmptyState
+                    title="No hay sugerencias por ahora"
+                    text="Cuando haya más piezas disponibles, aparecerán aquí."
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 24,
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))"
+                    }}
+                  >
+                    {recommended.map((item) => (
+                      <ProductCard key={item.id} product={item} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </div>
       </main>
       <SiteFooter />
@@ -1552,6 +2049,7 @@ export function App() {
       <Route path="/guia" element={<GuiaPage />} />
       <Route path="/colecciones" element={<ColeccionesPage />} />
       <Route path="/catalogo" element={<CatalogoPage />} />
+      <Route path="/producto/:slug" element={<ProductDetailPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
