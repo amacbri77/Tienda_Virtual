@@ -51,6 +51,13 @@ type CollectionItem = {
   isActive: boolean;
 };
 
+type NavigationItem = {
+  id: string;
+  label: string;
+  destination: string;
+  order: number;
+};
+
 const initialGuideAnswers: GuideAnswers = {
   purpose: null,
   meaning: null,
@@ -166,6 +173,45 @@ function useSiteSettings() {
   return siteSettings;
 }
 
+function useNavigationItems() {
+  const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([
+    { id: "guia", label: "Guía", destination: "/guia", order: 1 },
+    { id: "colecciones", label: "Colecciones", destination: "/colecciones", order: 2 },
+    { id: "catalogo", label: "Ver catálogo", destination: "/catalogo", order: 3 }
+  ]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadNavigation() {
+      try {
+        const response = await fetch(`${apiBase}/api/navigation`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error("No se pudo cargar la navegación.");
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data.navigation) ? data.navigation : [];
+
+        if (items.length > 0) {
+          setNavigationItems(items);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+
+    loadNavigation();
+
+    return () => controller.abort();
+  }, []);
+
+  return navigationItems;
+}
+
 function pageShellStyle(): React.CSSProperties {
   return {
     minHeight: "100vh",
@@ -254,6 +300,7 @@ function cardStyle(isMobile = false): React.CSSProperties {
 function SiteHeader() {
   const { isMobile } = useResponsive();
   const siteSettings = useSiteSettings();
+  const navigationItems = useNavigationItems();
 
   return (
     <header style={headerStyle()}>
@@ -327,15 +374,19 @@ function SiteHeader() {
             flexWrap: "wrap"
           }}
         >
-          <Link to="/guia" style={navLinkStyle()}>
-            Guía
-          </Link>
-          <Link to="/colecciones" style={navLinkStyle()}>
-            Colecciones
-          </Link>
-          <Link to="/catalogo" style={primaryButtonStyle(isMobile)}>
-            Ver catálogo
-          </Link>
+          {navigationItems.map((item, index) => {
+            const isLast = index === navigationItems.length - 1;
+
+            return (
+              <Link
+                key={item.id}
+                to={item.destination}
+                style={isLast ? primaryButtonStyle(isMobile) : navLinkStyle()}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </header>
