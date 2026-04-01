@@ -23,11 +23,18 @@ app.use("/api", siteRouter);
 app.use("/api", collectionsRouter);
 app.use("/api", navigationRouter);
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
-  res.status(500).json({
-    error: "Internal Server Error"
-  });
-});
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error(err);
+    res.status(500).json({
+      error: "Internal Server Error"
+    });
+  }
+);
 
 export default app;
